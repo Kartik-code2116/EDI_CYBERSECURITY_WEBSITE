@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────────────────────
+#  SERVER — .gitignore
+#  Files listed here are IGNORED by Git.
+#  ✅  Safe to share with team → .env.example  (template only)
+#  🚫  Never commit              → .env         (real secrets)
+# ─────────────────────────────────────────────────────────────
+
+# ── Secrets & environment ────────────────────────────────────
+# Contains MongoDB Atlas URI, JWT secrets, AI API keys.
+# Each team member creates their OWN .env from .env.example
+.env
+
+# ── Dependencies ─────────────────────────────────────────────
+# Re-installed via: npm install
+node_modules/
+package-lock.json
+
+# ── User-uploaded files ──────────────────────────────────────
+# PDFs / DOCX files uploaded by users — NOT source code
+uploads/
+
+# ── Generated PDF reports ────────────────────────────────────
+uploads/reports/
+*.pdf
+
+# ── Logs ─────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── OS / Editor junk ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

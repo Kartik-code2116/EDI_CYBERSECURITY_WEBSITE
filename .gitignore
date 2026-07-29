@@ -1,0 +1,20 @@
+# ─────────────────────────────────────────────────────────────
+#  ROOT — .gitignore
+#  Catches anything at the project root level
+# ─────────────────────────────────────────────────────────────
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor configs (personal preferences — not project-wide)
+.vscode/settings.json
+.idea/
+*.suo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Node (if ever run from root)
+node_modules/
