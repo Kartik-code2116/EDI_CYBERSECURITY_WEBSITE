@@ -1,0 +1,34 @@
+# FastAPI + Core
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+pydantic-settings==2.3.4
+
+# Web scraping / parsing
+beautifulsoup4==4.12.3
+lxml==5.2.2
+
+# HTTP
+httpx==0.27.0
+
+# Rate limiting
+slowapi==0.1.9
+
+# Playwright (optional — for screenshot capture)
+# playwright==1.44.0
+# Run after install: playwright install chromium
+
+# NLP (optional — for transformer model)
+# transformers==4.41.2
+# torch==2.3.0
+
+# Vision (optional — for YOLO integration)
+# ultralytics==8.2.0
+# Pillow==10.3.0
+
+# Database
+# aiosqlite==0.20.0  # async SQLite (optional upgrade)
+
+# Utilities
+python-multipart==0.0.9
+python-dotenv==1.0.1
