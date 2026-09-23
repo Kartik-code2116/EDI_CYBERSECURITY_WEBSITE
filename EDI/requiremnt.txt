@@ -1,0 +1,13 @@
+# Core
+Pillow>=10.0.0
+numpy>=1.24.0
+opencv-python>=4.8.0
+
+# OCR (primary engine)
+pytesseract>=0.3.10
+
+# QR decoding (optional but recommended; needs system zbar lib)
+pyzbar>=0.1.9
+
+# OCR fallback engine (optional, heavier)
+easyocr>=1.7.0
