@@ -3,13 +3,21 @@ const fs = require('fs');
 const Scan = require('../models/Scan');
 const ThreatLog = require('../models/ThreatLog');
 const { analyzeUrl, analyzeDocument } = require('../services/aiService');
+const { buildScanResult } = require('../schemas/scanResult');
 
-// @desc    Analyze a URL
-// @route   POST /api/analyze/url
+// ── @desc    Analyze a URL ────────────────────────────────────────────────────
+// ── @route   POST /api/analyze/url
 const analyzeUrlHandler = async (req, res) => {
   try {
     const { url } = req.body;
-    if (!url) return res.status(400).json({ error: 'URL is required' });
+    if (!url) return res.status(400).json({ error: 'URL is required.' });
+
+    // Basic URL validation
+    try {
+      new URL(url);
+    } catch {
+      return res.status(400).json({ error: 'Please provide a valid URL (e.g. https://example.com).' });
+    }
 
     const start = Date.now();
     const aiResult = await analyzeUrl(url);
@@ -30,38 +38,49 @@ const analyzeUrlHandler = async (req, res) => {
       status: 'completed',
     });
 
-    // Log threat if score > 50
+    // Log threat if risk score > 50
     if (aiResult.threatScore > 50) {
       await ThreatLog.create({
         scan: scan._id,
         user: req.user._id,
         threatType: 'URL Threat',
         severity:
-          aiResult.threatScore > 80
-            ? 'critical'
-            : aiResult.threatScore > 60
-            ? 'high'
-            : 'medium',
-        description: aiResult.aiExplanation,
+          aiResult.threatScore > 80 ? 'critical'
+          : aiResult.threatScore > 60 ? 'high'
+          : 'medium',
+        description: aiResult.aiExplanation || 'Suspicious URL detected.',
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
       });
     }
 
-    res.status(201).json({ scan });
+    // Return standardised scan result
+    const result = buildScanResult(aiResult, url, 'url', scan._id.toString(), duration);
+
+    return res.status(201).json({ scan, result });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[analyzeUrl]', error);
+    return res.status(500).json({
+      error: process.env.NODE_ENV === 'development'
+        ? error.message
+        : 'Scan failed. Please try again.',
+    });
   }
 };
 
-// @desc    Analyze a document (PDF/DOCX)
-// @route   POST /api/analyze/document
+// ── @desc    Analyze a document (PDF/DOCX) ───────────────────────────────────
+// ── @route   POST /api/analyze/document
 const analyzeDocumentHandler = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
 
     const { originalname, filename, mimetype, size, path: filePath } = req.file;
-    const fileType = mimetype === 'application/pdf' ? 'pdf' : 'docx';
+
+    // Determine type label
+    const fileType =
+      mimetype === 'application/pdf' ? 'pdf'
+      : mimetype.includes('word') ? 'docx'
+      : 'document';
 
     const start = Date.now();
     const aiResult = await analyzeDocument(filePath, originalname, mimetype);
@@ -94,16 +113,26 @@ const analyzeDocumentHandler = async (req, res) => {
         user: req.user._id,
         threatType: `${fileType.toUpperCase()} Document Threat`,
         severity:
-          aiResult.threatScore > 80 ? 'critical' : aiResult.threatScore > 60 ? 'high' : 'medium',
-        description: aiResult.aiExplanation,
+          aiResult.threatScore > 80 ? 'critical'
+          : aiResult.threatScore > 60 ? 'high'
+          : 'medium',
+        description: aiResult.aiExplanation || 'Suspicious document detected.',
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
       });
     }
 
-    res.status(201).json({ scan });
+    // Return standardised scan result
+    const result = buildScanResult(aiResult, originalname, fileType, scan._id.toString(), duration);
+
+    return res.status(201).json({ scan, result });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[analyzeDocument]', error);
+    return res.status(500).json({
+      error: process.env.NODE_ENV === 'development'
+        ? error.message
+        : 'Scan failed. Please try again.',
+    });
   }
 };
 

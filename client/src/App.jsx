@@ -6,14 +6,17 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import UrlAnalyzer from './pages/UrlAnalyzer';
 import DocumentAnalyzer from './pages/DocumentAnalyzer';
+import ImageAnalyzer from './pages/ImageAnalyzer';
 import ScanHistory from './pages/ScanHistory';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import AdminPanel from './pages/admin/AdminPanel';
 import NotFound from './pages/NotFound';
+
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -45,13 +48,16 @@ export default function App() {
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+        <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
       </Route>
+
 
       {/* Protected Dashboard */}
       <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/analyze/url" element={<UrlAnalyzer />} />
         <Route path="/analyze/document" element={<DocumentAnalyzer />} />
+        <Route path="/analyze/image" element={<ImageAnalyzer />} />
         <Route path="/history" element={<ScanHistory />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/profile" element={<Profile />} />

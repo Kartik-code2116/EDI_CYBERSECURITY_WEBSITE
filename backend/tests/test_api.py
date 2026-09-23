@@ -192,3 +192,24 @@ class TestBackendUnavailableSimulation:
     def test_method_not_allowed(self):
         response = client.get("/api/analyze/url")
         assert response.status_code == 405
+
+
+class TestImageAnalysisEndpoint:
+    def test_image_upload_analysis_returns_200(self, tmp_path):
+        from PIL import Image
+
+        image_path = tmp_path / "phish.png"
+        img = Image.new("RGB", (200, 200), color="white")
+        img.save(image_path)
+
+        with open(image_path, "rb") as f:
+            response = client.post(
+                "/api/analyze/image",
+                files={"file": ("phish.png", f.read(), "image/png")},
+            )
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["success"] is True
+        assert "image" in data
+        assert isinstance(data["image"]["risk_score"], (int, float))

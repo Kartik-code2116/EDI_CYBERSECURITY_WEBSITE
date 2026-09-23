@@ -15,13 +15,16 @@ import base64
 import uuid
 from typing import Optional
 from urllib.parse import urlparse
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, UploadFile, File
 from fastapi.responses import JSONResponse
+from pathlib import Path
+import tempfile
 
 from app.schemas.models import (
     URLAnalysisRequest,
     PageAnalysisRequest,
     ScreenshotAnalysisRequest,
+    ImageAnalysisResult as ImageAnalysisResultSchema,
     AnalysisResponse,
     HealthResponse,
     RiskResult as RiskResultSchema,
@@ -36,6 +39,7 @@ from app.services.vision.detector import VisionThreatDetector
 from app.services.nlp.analyzer import SocialEngineeringAnalyzer
 from app.services.risk_engine.engine import RiskEngine, RiskInput
 from app.services.security_analyst.analyst import SecurityAnalyst
+from app.services.image_analyzer.analyzer import analyze_image, ImageAnalysisError
 from app.db.repository import AnalysisRepository
 from app.core.config import get_settings
 
@@ -377,6 +381,94 @@ async def analyze_screenshot(request: ScreenshotAnalysisRequest):
     except Exception as exc:
         logger.error("Screenshot analysis failed", exc_info=exc)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(exc)}")
+
+
+@router.post("/analyze/image", response_model=AnalysisResponse, tags=["Analysis"])
+async def analyze_uploaded_image(file: UploadFile = File(...)):
+    """Analyze an uploaded PNG/JPEG/WEBP/BMP image for phishing malware indicators."""
+    start_time = time.monotonic()
+    filename = file.filename or "uploaded_image"
+    suffix = Path(filename).suffix.lower()
+    allowed_exts = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+    if suffix not in allowed_exts:
+        raise HTTPException(status_code=400, detail="Unsupported image type. Use JPG, PNG, WEBP, or BMP.")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Image file is empty")
+    if len(contents) > settings.max_screenshot_bytes:
+        raise HTTPException(status_code=413, detail="Image too large")
+
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(contents)
+            temp_path = tmp.name
+
+        image_result = analyze_image(temp_path)
+        domain = "uploaded-image"
+        image_score = float(image_result.get("risk_score", 0))
+        image_indicators = image_result.get("indicators", [])
+
+        risk_input = RiskInput(
+            url_risk_score=0.0,
+            page_risk_score=0.0,
+            vision_risk_score=image_score,
+            nlp_risk_score=0.0,
+            behavior_risk_score=0.0,
+            vision_threats=image_indicators,
+            has_ssl=True,
+        )
+        risk_result = _risk_engine.calculate(risk_input)
+        analyst_output = _security_analyst.explain(risk_result, domain)
+
+        duration_ms = round((time.monotonic() - start_time) * 1000)
+        analysis_id = _repository.save(
+            domain=domain,
+            risk_score=risk_result.risk_score,
+            severity=risk_result.severity,
+            model_version="image_v1",
+            scan_duration_ms=duration_ms,
+            threats_json=json.dumps(risk_result.threats),
+        )
+
+        image_schema = ImageAnalysisResultSchema(
+            filename=image_result.get("filename", filename),
+            format=image_result.get("format"),
+            mime_type=image_result.get("mime_type"),
+            file_size_bytes=image_result.get("file_size_bytes", len(contents)),
+            width=image_result.get("width"),
+            height=image_result.get("height"),
+            color_mode=image_result.get("color_mode"),
+            sha256=image_result.get("sha256"),
+            ocr_text=image_result.get("ocr_text", ""),
+            ocr_engine=image_result.get("ocr_engine"),
+            urls=image_result.get("urls", []),
+            qr_codes=image_result.get("qr_codes", []),
+            risk_score=float(image_result.get("risk_score", 0)),
+            classification=image_result.get("classification", "Safe / Benign"),
+            indicators=image_result.get("indicators", []),
+            matched_rules=image_result.get("matched_rules", []),
+        )
+
+        return AnalysisResponse(
+            success=True,
+            analysis_id=analysis_id,
+            url="",
+            domain=domain,
+            risk=_risk_result_to_schema(risk_result),
+            image=image_schema,
+            explanation=analyst_output.explanation,
+            recommendation=analyst_output.recommendation,
+            model_versions={**MODEL_VERSIONS, "image_analyzer": "edi_v1"},
+            scan_duration_ms=duration_ms,
+        )
+    except ImageAnalysisError as exc:
+        logger.warning("Uploaded image analysis failed", exc_info=exc)
+        raise HTTPException(status_code=400, detail=f"Image analysis failed: {str(exc)}")
+    finally:
+        if temp_path and Path(temp_path).exists():
+            Path(temp_path).unlink(missing_ok=True)
 
 
 # ── Recent Analyses ───────────────────────────────────────────────────────────

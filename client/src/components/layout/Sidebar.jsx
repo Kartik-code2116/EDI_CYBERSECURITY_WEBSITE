@@ -4,8 +4,9 @@ import { useAuth } from '../../hooks/useAuth';
 
 const navItems = [
   { to: '/dashboard', icon: '⊞', label: 'Dashboard' },
-  { to: '/analyze/url', icon: '🔗', label: 'URL Analyzer' },
-  { to: '/analyze/document', icon: '📄', label: 'Doc Analyzer' },
+  { to: '/analyze/url',      icon: '🔗', label: 'URL Analyzer'   },
+  { to: '/analyze/document', icon: '📄', label: 'Doc Analyzer'   },
+  { to: '/analyze/image',    icon: '🖼️', label: 'Image Analyzer' },
   { to: '/history', icon: '📋', label: 'Scan History' },
   { to: '/reports', icon: '📊', label: 'Reports' },
   { to: '/profile', icon: '👤', label: 'Profile' },

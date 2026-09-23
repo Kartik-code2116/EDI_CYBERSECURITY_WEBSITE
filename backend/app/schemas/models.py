@@ -54,6 +54,26 @@ class ScreenshotAnalysisRequest(BaseModel):
     screenshot_base64: str = Field(..., description="Base64-encoded PNG/JPEG screenshot")
 
 
+class ImageAnalysisResult(BaseModel):
+    """Result from the EDI image malware/phishing analyzer."""
+    filename: str
+    format: Optional[str] = None
+    mime_type: Optional[str] = None
+    file_size_bytes: int = 0
+    width: Optional[int] = None
+    height: Optional[int] = None
+    color_mode: Optional[str] = None
+    sha256: Optional[str] = None
+    ocr_text: str = ""
+    ocr_engine: Optional[str] = None
+    urls: list[str] = Field(default_factory=list)
+    qr_codes: list[Dict[str, Any]] = Field(default_factory=list)
+    risk_score: float = 0.0
+    classification: str = "Safe / Benign"
+    indicators: list[str] = Field(default_factory=list)
+    matched_rules: list[Dict[str, Any]] = Field(default_factory=list)
+
+
 # ── Response Schemas ──────────────────────────────────────────────────────────
 
 class URLFeatures(BaseModel):
@@ -137,6 +157,7 @@ class AnalysisResponse(BaseModel):
     url_features: Optional[URLFeatures] = None
     page_features: Optional[PageFeatures] = None
     vision: Optional[VisionResult] = None
+    image: Optional[ImageAnalysisResult] = None
     nlp: Optional[NLPResult] = None
     explanation: str  # AI Security Analyst output
     recommendation: str
